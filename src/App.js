@@ -7,16 +7,36 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const handleSubmit = async (e) => {
+  function setCookie(name, user_id) {
+    const expires = new Date(Date.now() + 86400_000).toUTCString()
+    document.cookie = `${name}=${encodeURIComponent(user_id)};expires=${expires};path=/`
+  }
+
+  setCookie("user_id","1");
+  setCookie("agent_id",)
+  setCookie("route", "chat")
+  setCookie("auth_server", "https://host-spotify-vertexai-365383383851.us-central1.run.app")
+  setCookie("scope", "user-library-read user-top-read")
+
+  function getCookie(name) {
+    const match = document.cookie.match(
+      new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()[]\/+^])/g,'\\$1') + '=([^;]*)')
+    )
+    return match ? decodeURIComponent(match[1]) : null
+  }
+  
+  const handleLogin = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
     setResponse('');
 
     try {
+      console.log(getCookie("scope"))
       const { data } = await axios.post(
-        process.env.REACT_APP_AGENT_URL,
-        { prompt },
+        process.env.REACT_APP_LOGIN_URL,
+        { scope: getCookie("scope"), 
+          auth_server: getCookie("auth_server"), 
+          user_id: getCookie("user_id"), },
         {
           headers: {
             'Content-Type': 'application/json'
@@ -24,17 +44,49 @@ function App() {
         }
       );
       // assuming your API responds { text: "..." }
-      setResponse(data.text ?? JSON.stringify(data));
+      setResponse(data.response ?? JSON.stringify(data));
+      setCookie("token", data.token)
     } catch (err) {
       console.error(err);
-      // axios error messages can be nested
-      setError(
-        err.response
-          ? `HTTP ${err.response.status}: ${err.response.data}`
-          : err.message
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setResponse('');
+
+    try {
+      const payload = { token: getCookie("token"), 
+          prompt, 
+          agent_id: getCookie("agent_id"), 
+          user_id: getCookie("user_id"), };
+      
+      if (getCookie("session_id")) {
+        payload.session_id = getCookie("session_id")
+      }
+        
+      const { data } = await axios.post(
+        process.env.REACT_APP_AGENT_URL,
+        payload,
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          },
+        }
       );
-    } finally {
-      setLoading(false);
+      // assuming your API responds { text: "..." }
+      setResponse(data.response ?? JSON.stringify(data));
+      setCookie("session_id", data.session_id)
+    } catch (err) {
+      if (err.response?.status === 401) {
+        const { authUrl } = err.response.data.detail || err.response.data;
+        console.log(authUrl)
+        window.location.href = authUrl;
+      } else {
+        console.error(err);
+      }
     }
   };
 
@@ -54,6 +106,13 @@ function App() {
         </button>
       </form>
 
+      <form onSubmit={handleLogin}>
+        <button type="submit" style={{ marginTop: '0.5rem' }}>
+          {"login"}
+        </button>
+      </form>
+
+
       {error && (
         <div style={{ marginTop: '1rem', color: 'red' }}>
           Error: {error}
@@ -68,6 +127,6 @@ function App() {
       )}
     </div>
   );
-}
 
+};
 export default App;
