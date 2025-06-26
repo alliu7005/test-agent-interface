@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom'
 import axios from 'axios';
 
 
@@ -7,6 +8,18 @@ function App() {
   const [response, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const token = params.get("token");
+    if (token) {
+      setCookie("token", token, { path: "/"});
+      navigate(location.pathname, {replace:true});
+    }
+  }, [location, navigate]);
 
   function setCookie(name, user_id) {
     const expires = new Date(Date.now() + 86400_000).toUTCString()
@@ -31,25 +44,15 @@ function App() {
     setError(null);
     setResponse('');
 
-    try {
-      console.log(getCookie("scope"))
-      const { data } = await axios.post(
-        process.env.REACT_APP_LOGIN_URL,
-        { scope: getCookie("scope"), 
-          auth_server: getCookie("auth_server"), 
-          user_id: getCookie("user_id"), },
-        {
-          headers: {
-            'Content-Type': 'application/json'
-          },
-        }
-      );
-      // assuming your API responds { text: "..." }
-      setResponse(data.response ?? JSON.stringify(data));
-      setCookie("token", data.token)
-    } catch (err) {
-      console.error(err);
-    }
+    const currentWindow = window.location.href
+
+    const params = new URLSearchParams({
+      scope: getCookie("scope"),
+      auth_server: getCookie("auth_server"),
+      return_window: currentWindow
+    })
+
+    window.location.href = `${process.env.REACT_APP_LOGIN_URL}?${params}`;
   };
 
   const handleSubmit = async (e) => {
