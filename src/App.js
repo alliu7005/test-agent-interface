@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
+
 function App() {
   const [prompt, setPrompt] = useState('');
   const [response, setResponse] = useState('');
@@ -14,25 +15,36 @@ function App() {
     setResponse('');
 
     try {
+
       const { data } = await axios.post(
-        process.env.REACT_APP_AGENT_URL,
-        { prompt },
+        process.env.REACT_APP_CALL_VERTEX_URL,
+        {
+          endpoint_url: process.env.REACT_APP_AGENT_URL,
+          instances: [{prompt}]
+        },
         {
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
           },
         }
       );
       // assuming your API responds { text: "..." }
       setResponse(data.text ?? JSON.stringify(data));
     } catch (err) {
-      console.error(err);
-      // axios error messages can be nested
-      setError(
-        err.response
-          ? `HTTP ${err.response.status}: ${err.response.data}`
-          : err.message
-      );
+      if (err.response?.status === 401) {
+        const authUrl = err.response.data?.authUrl 
+                      || err.response.data?.detail?.authUrl;
+        if (authUrl) {
+            // redirect the browser
+          window.location.href = authUrl;
+          return; 
+        }
+      }
+      // rethrow any other errors
+      console.error('Status:', error.response.status);
+      console.error('Headers:', error.response.headers);
+      console.error('Body:', error.response.data);
+      throw err;
     } finally {
       setLoading(false);
     }
