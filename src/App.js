@@ -27,7 +27,7 @@ function App() {
   }
 
   setCookie("user_id","1");
-  setCookie("agent_id",)
+  setCookie("agent_id", "8597961026882764800")
   setCookie("route", "chat")
   setCookie("auth_server", "https://host-spotify-vertexai-365383383851.us-central1.run.app")
   setCookie("scope", "user-library-read user-top-read")
