@@ -26,10 +26,10 @@ function App() {
     document.cookie = `${name}=${encodeURIComponent(user_id)};expires=${expires};path=/`
   }
 
-  setCookie("user_id","1");
-  setCookie("agent_id", "2980846391644913664")
-  setCookie("route", "chat")
-  setCookie("auth_server", "https://host-spotify-vertexai-365383383851.us-central1.run.app")
+  setCookie("session_id","1");
+  setCookie("agent_id", "langchain-agent-01-spotify")
+  setCookie("route", "predict")
+  setCookie("auth_server", "https://spotify-oauth-206239759924.us-central1.run.app/login")
   setCookie("scope", "user-library-read user-top-read")
 
   function getCookie(name) {
@@ -47,12 +47,11 @@ function App() {
     const currentWindow = window.location.href
 
     const params = new URLSearchParams({
-      scope: getCookie("scope"),
-      auth_server: getCookie("auth_server"),
-      return_window: currentWindow
+      scopes: getCookie("scope"),
+      return_url: currentWindow
     })
 
-    window.location.href = `${process.env.REACT_APP_LOGIN_URL}?${params}`;
+    window.location.href = `${getCookie("auth_server")}?${params}`;
   };
 
   const handleSubmit = async (e) => {
@@ -62,18 +61,10 @@ function App() {
     setResponse('');
 
     try {
-      const payload = { token: getCookie("token"), 
-          prompt, 
-          agent_id: getCookie("agent_id"), 
-          user_id: getCookie("user_id"), };
-      
-      if (getCookie("session_id")) {
-        payload.session_id = getCookie("session_id")
-      }
         
       const { data } = await axios.post(
         process.env.REACT_APP_AGENT_URL,
-        payload,
+        {token: getCookie("token"), prompt, session_id: getCookie("session_id")},
         {
           headers: {
             'Content-Type': 'application/json',
@@ -82,15 +73,8 @@ function App() {
       );
       // assuming your API responds { text: "..." }
       setResponse(data.response ?? JSON.stringify(data));
-      setCookie("session_id", data.session_id)
     } catch (err) {
-      if (err.response?.status === 401) {
-        const { authUrl } = err.response.data.detail || err.response.data;
-        console.log(authUrl)
-        window.location.href = authUrl;
-      } else {
-        console.error(err);
-      }
+      console.error(err);
     }
   };
 
